@@ -11,10 +11,14 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sharatchandra/taskflow/internal/config"
 	"github.com/sharatchandra/taskflow/internal/database"
+	"github.com/sharatchandra/taskflow/internal/logger"
 	"github.com/sharatchandra/taskflow/internal/server"
 )
 
 func main() {
+	// Set up structured logging
+	logger.Setup()
+
 	// Load .env file if present (ignored in production/Docker)
 	_ = godotenv.Load()
 
