@@ -31,12 +31,15 @@ func New(cfg *config.Config, db *sql.DB) *Server {
 
 	// Repositories
 	userRepo := repository.NewUserRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
 
 	// Services
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.BcryptCost)
+	projectService := service.NewProjectService(projectRepo)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
+	projectHandler := handler.NewProjectHandler(projectService)
 
 	// Public routes
 	auth := router.Group("/auth")
@@ -50,8 +53,16 @@ func New(cfg *config.Config, db *sql.DB) *Server {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	// Protected routes (will add project and task handlers here later)
-	_ = router.Group("/").Use(middleware.Auth(cfg.JWTSecret))
+	// Protected routes
+	authorized := router.Group("/")
+	authorized.Use(middleware.Auth(cfg.JWTSecret))
+	{
+		authorized.GET("/projects", projectHandler.List)
+		authorized.POST("/projects", projectHandler.Create)
+		authorized.GET("/projects/:id", projectHandler.Get)
+		authorized.PATCH("/projects/:id", projectHandler.Update)
+		authorized.DELETE("/projects/:id", projectHandler.Delete)
+	}
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
