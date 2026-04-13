@@ -32,14 +32,17 @@ func New(cfg *config.Config, db *sql.DB) *Server {
 	// Repositories
 	userRepo := repository.NewUserRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
+	taskRepo := repository.NewTaskRepository(db)
 
 	// Services
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.BcryptCost)
 	projectService := service.NewProjectService(projectRepo)
+	taskService := service.NewTaskService(taskRepo, projectRepo)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService)
 	projectHandler := handler.NewProjectHandler(projectService)
+	taskHandler := handler.NewTaskHandler(taskService)
 
 	// Public routes
 	auth := router.Group("/auth")
@@ -62,6 +65,11 @@ func New(cfg *config.Config, db *sql.DB) *Server {
 		authorized.GET("/projects/:id", projectHandler.Get)
 		authorized.PATCH("/projects/:id", projectHandler.Update)
 		authorized.DELETE("/projects/:id", projectHandler.Delete)
+
+		authorized.GET("/projects/:id/tasks", taskHandler.List)
+		authorized.POST("/projects/:id/tasks", taskHandler.Create)
+		authorized.PATCH("/tasks/:id", taskHandler.Update)
+		authorized.DELETE("/tasks/:id", taskHandler.Delete)
 	}
 
 	srv := &http.Server{
