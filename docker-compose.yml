@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-taskflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-taskflow}
+      POSTGRES_DB: ${DB_NAME:-taskflow}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-taskflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      DATABASE_URL: "postgres://${DB_USER:-taskflow}:${DB_PASSWORD:-taskflow}@db:5432/${DB_NAME:-taskflow}?sslmode=disable"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER:-taskflow}
+      JWT_SECRET: ${JWT_SECRET:-change-me-to-a-random-secret-in-production}
+      BCRYPT_COST: ${BCRYPT_COST:-12}
+      LOG_FORMAT: json
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
