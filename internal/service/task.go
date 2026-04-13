@@ -71,7 +71,7 @@ func (s *TaskService) GetByID(ctx context.Context, id uuid.UUID) (*model.Task, e
 }
 
 // ListByProject returns tasks for a project, optionally filtered.
-func (s *TaskService) ListByProject(ctx context.Context, projectID uuid.UUID, filter model.TaskFilter, pagination model.PaginationParams) ([]model.Task, model.PaginationMeta, error) {
+func (s *TaskService) ListByProject(ctx context.Context, userID uuid.UUID, projectID uuid.UUID, filter model.TaskFilter, pagination model.PaginationParams) ([]model.Task, model.PaginationMeta, error) {
 	// Verify the project exists
 	project, err := s.projectRepo.FindByID(ctx, projectID)
 	if err != nil {
@@ -79,6 +79,16 @@ func (s *TaskService) ListByProject(ctx context.Context, projectID uuid.UUID, fi
 	}
 	if project == nil {
 		return nil, model.PaginationMeta{}, ErrNotFound
+	}
+
+	// Users can list tasks for projects they own or are assigned in.
+	// This keeps read access aligned with the /projects visibility rule.
+	canAccess, err := s.projectRepo.CanAccess(ctx, projectID, userID)
+	if err != nil {
+		return nil, model.PaginationMeta{}, fmt.Errorf("checking project access: %w", err)
+	}
+	if !canAccess {
+		return nil, model.PaginationMeta{}, ErrForbidden
 	}
 
 	tasks, total, err := s.taskRepo.ListByProject(ctx, projectID, filter, pagination)

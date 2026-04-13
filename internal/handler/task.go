@@ -21,6 +21,8 @@ func NewTaskHandler(taskService *service.TaskService) *TaskHandler {
 
 // List handles GET /projects/:id/tasks.
 func (h *TaskHandler) List(c *gin.Context) {
+	userID := c.MustGet("user_id").(uuid.UUID)
+
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
@@ -53,7 +55,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 		return
 	}
 
-	tasks, meta, err := h.taskService.ListByProject(c.Request.Context(), projectID, filter, pagination)
+	tasks, meta, err := h.taskService.ListByProject(c.Request.Context(), userID, projectID, filter, pagination)
 	if err != nil {
 		handleServiceError(c, err)
 		return

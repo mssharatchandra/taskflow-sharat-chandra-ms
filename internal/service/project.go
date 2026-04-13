@@ -37,8 +37,8 @@ func (s *ProjectService) Create(ctx context.Context, userID uuid.UUID, req model
 	return project, nil
 }
 
-// GetByID returns a project by its ID.
-func (s *ProjectService) GetByID(ctx context.Context, id uuid.UUID) (*model.Project, error) {
+// GetByID returns a project and its tasks by project ID.
+func (s *ProjectService) GetByID(ctx context.Context, userID uuid.UUID, id uuid.UUID) (*model.ProjectWithTasks, error) {
 	project, err := s.projectRepo.FindByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("finding project: %w", err)
@@ -47,7 +47,23 @@ func (s *ProjectService) GetByID(ctx context.Context, id uuid.UUID) (*model.Proj
 		return nil, ErrNotFound
 	}
 
-	return project, nil
+	canAccess, err := s.projectRepo.CanAccess(ctx, id, userID)
+	if err != nil {
+		return nil, fmt.Errorf("checking project access: %w", err)
+	}
+	if !canAccess {
+		return nil, ErrForbidden
+	}
+
+	projectWithTasks, err := s.projectRepo.FindWithTasksByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("finding project with tasks: %w", err)
+	}
+	if projectWithTasks == nil {
+		return nil, ErrNotFound
+	}
+
+	return projectWithTasks, nil
 }
 
 // List returns all projects accessible to the given user.
@@ -64,6 +80,32 @@ func (s *ProjectService) List(ctx context.Context, userID uuid.UUID, pagination 
 
 	meta := model.NewPaginationMeta(pagination, total)
 	return projects, meta, nil
+}
+
+// Stats returns aggregate task counts by status and assignee for a project.
+func (s *ProjectService) Stats(ctx context.Context, userID uuid.UUID, projectID uuid.UUID) (*model.ProjectStats, error) {
+	project, err := s.projectRepo.FindByID(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("finding project: %w", err)
+	}
+	if project == nil {
+		return nil, ErrNotFound
+	}
+
+	canAccess, err := s.projectRepo.CanAccess(ctx, projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("checking project access: %w", err)
+	}
+	if !canAccess {
+		return nil, ErrForbidden
+	}
+
+	stats, err := s.projectRepo.GetStats(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("getting project stats: %w", err)
+	}
+
+	return stats, nil
 }
 
 // Update modifies a project. Only the owner can update.

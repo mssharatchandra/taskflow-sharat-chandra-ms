@@ -63,6 +63,7 @@ func New(cfg *config.Config, db *sql.DB) *Server {
 		authorized.GET("/projects", projectHandler.List)
 		authorized.POST("/projects", projectHandler.Create)
 		authorized.GET("/projects/:id", projectHandler.Get)
+		authorized.GET("/projects/:id/stats", projectHandler.Stats)
 		authorized.PATCH("/projects/:id", projectHandler.Update)
 		authorized.DELETE("/projects/:id", projectHandler.Delete)
 

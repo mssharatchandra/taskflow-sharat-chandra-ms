@@ -68,13 +68,15 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 
 // Get handles GET /projects/:id.
 func (h *ProjectHandler) Get(c *gin.Context) {
+	userID := c.MustGet("user_id").(uuid.UUID)
+
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
 		return
 	}
 
-	project, err := h.projectService.GetByID(c.Request.Context(), projectID)
+	project, err := h.projectService.GetByID(c.Request.Context(), userID, projectID)
 	if err != nil {
 		handleServiceError(c, err)
 		return
@@ -129,6 +131,25 @@ func (h *ProjectHandler) Delete(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// Stats handles GET /projects/:id/stats.
+func (h *ProjectHandler) Stats(c *gin.Context) {
+	userID := c.MustGet("user_id").(uuid.UUID)
+
+	projectID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
+		return
+	}
+
+	stats, err := h.projectService.Stats(c.Request.Context(), userID, projectID)
+	if err != nil {
+		handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }
 
 // handleServiceError maps domain errors to HTTP responses.
