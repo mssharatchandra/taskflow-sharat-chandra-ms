@@ -51,10 +51,10 @@ func (s *ProjectService) GetByID(ctx context.Context, id uuid.UUID) (*model.Proj
 }
 
 // List returns all projects accessible to the given user.
-func (s *ProjectService) List(ctx context.Context, userID uuid.UUID) ([]model.Project, error) {
-	projects, err := s.projectRepo.List(ctx, userID)
+func (s *ProjectService) List(ctx context.Context, userID uuid.UUID, pagination model.PaginationParams) ([]model.Project, model.PaginationMeta, error) {
+	projects, total, err := s.projectRepo.List(ctx, userID, pagination)
 	if err != nil {
-		return nil, fmt.Errorf("listing projects: %w", err)
+		return nil, model.PaginationMeta{}, fmt.Errorf("listing projects: %w", err)
 	}
 
 	// Return empty slice instead of nil for consistent JSON output
@@ -62,7 +62,8 @@ func (s *ProjectService) List(ctx context.Context, userID uuid.UUID) ([]model.Pr
 		projects = []model.Project{}
 	}
 
-	return projects, nil
+	meta := model.NewPaginationMeta(pagination, total)
+	return projects, meta, nil
 }
 
 // Update modifies a project. Only the owner can update.

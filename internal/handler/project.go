@@ -24,13 +24,22 @@ func NewProjectHandler(projectService *service.ProjectService) *ProjectHandler {
 func (h *ProjectHandler) List(c *gin.Context) {
 	userID := c.MustGet("user_id").(uuid.UUID)
 
-	projects, err := h.projectService.List(c.Request.Context(), userID)
+	pagination, errs := parsePagination(c)
+	if len(errs) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "fields": errs})
+		return
+	}
+
+	projects, meta, err := h.projectService.List(c.Request.Context(), userID, pagination)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"projects": projects})
+	c.JSON(http.StatusOK, gin.H{
+		"projects":   projects,
+		"pagination": meta,
+	})
 }
 
 // Create handles POST /projects.

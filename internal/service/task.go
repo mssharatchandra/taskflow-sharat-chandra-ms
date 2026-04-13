@@ -71,26 +71,27 @@ func (s *TaskService) GetByID(ctx context.Context, id uuid.UUID) (*model.Task, e
 }
 
 // ListByProject returns tasks for a project, optionally filtered.
-func (s *TaskService) ListByProject(ctx context.Context, projectID uuid.UUID, filter model.TaskFilter) ([]model.Task, error) {
+func (s *TaskService) ListByProject(ctx context.Context, projectID uuid.UUID, filter model.TaskFilter, pagination model.PaginationParams) ([]model.Task, model.PaginationMeta, error) {
 	// Verify the project exists
 	project, err := s.projectRepo.FindByID(ctx, projectID)
 	if err != nil {
-		return nil, fmt.Errorf("finding project: %w", err)
+		return nil, model.PaginationMeta{}, fmt.Errorf("finding project: %w", err)
 	}
 	if project == nil {
-		return nil, ErrNotFound
+		return nil, model.PaginationMeta{}, ErrNotFound
 	}
 
-	tasks, err := s.taskRepo.ListByProject(ctx, projectID, filter)
+	tasks, total, err := s.taskRepo.ListByProject(ctx, projectID, filter, pagination)
 	if err != nil {
-		return nil, fmt.Errorf("listing tasks: %w", err)
+		return nil, model.PaginationMeta{}, fmt.Errorf("listing tasks: %w", err)
 	}
 
 	if tasks == nil {
 		tasks = []model.Task{}
 	}
 
-	return tasks, nil
+	meta := model.NewPaginationMeta(pagination, total)
+	return tasks, meta, nil
 }
 
 // Update modifies a task. Any authenticated user can update tasks in a project.

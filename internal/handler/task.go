@@ -47,13 +47,22 @@ func (h *TaskHandler) List(c *gin.Context) {
 		filter.Assignee = &assigneeID
 	}
 
-	tasks, err := h.taskService.ListByProject(c.Request.Context(), projectID, filter)
+	pagination, errs := parsePagination(c)
+	if len(errs) > 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "validation failed", "fields": errs})
+		return
+	}
+
+	tasks, meta, err := h.taskService.ListByProject(c.Request.Context(), projectID, filter, pagination)
 	if err != nil {
 		handleServiceError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"tasks": tasks})
+	c.JSON(http.StatusOK, gin.H{
+		"tasks":      tasks,
+		"pagination": meta,
+	})
 }
 
 // Create handles POST /projects/:id/tasks.

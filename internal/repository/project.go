@@ -13,7 +13,7 @@ import (
 type ProjectRepository interface {
 	Create(ctx context.Context, project *model.Project) error
 	FindByID(ctx context.Context, id uuid.UUID) (*model.Project, error)
-	List(ctx context.Context, userID uuid.UUID) ([]model.Project, error)
+	List(ctx context.Context, userID uuid.UUID, pagination model.PaginationParams) ([]model.Project, int, error)
 	Update(ctx context.Context, project *model.Project) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -64,18 +64,30 @@ func (r *postgresProjectRepo) FindByID(ctx context.Context, id uuid.UUID) (*mode
 	return &p, nil
 }
 
-// List returns all projects that the user owns or has tasks assigned in.
-func (r *postgresProjectRepo) List(ctx context.Context, userID uuid.UUID) ([]model.Project, error) {
+// List returns paginated projects that the user owns or has tasks assigned in.
+func (r *postgresProjectRepo) List(ctx context.Context, userID uuid.UUID, pagination model.PaginationParams) ([]model.Project, int, error) {
+	countQuery := `
+		SELECT COUNT(DISTINCT p.id)
+		FROM projects p
+		LEFT JOIN tasks t ON t.project_id = p.id
+		WHERE p.owner_id = $1 OR t.assignee_id = $1`
+
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting projects: %w", err)
+	}
+
 	query := `
 		SELECT DISTINCT p.id, p.name, p.description, p.owner_id, p.created_at
 		FROM projects p
 		LEFT JOIN tasks t ON t.project_id = p.id
 		WHERE p.owner_id = $1 OR t.assignee_id = $1
-		ORDER BY p.created_at DESC`
+		ORDER BY p.created_at DESC
+		LIMIT $2 OFFSET $3`
 
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := r.db.QueryContext(ctx, query, userID, pagination.Limit, pagination.Offset())
 	if err != nil {
-		return nil, fmt.Errorf("listing projects: %w", err)
+		return nil, 0, fmt.Errorf("listing projects: %w", err)
 	}
 	defer rows.Close()
 
@@ -84,7 +96,7 @@ func (r *postgresProjectRepo) List(ctx context.Context, userID uuid.UUID) ([]mod
 		var p model.Project
 		var desc sql.NullString
 		if err := rows.Scan(&p.ID, &p.Name, &desc, &p.OwnerID, &p.CreatedAt); err != nil {
-			return nil, fmt.Errorf("scanning project: %w", err)
+			return nil, 0, fmt.Errorf("scanning project: %w", err)
 		}
 		if desc.Valid {
 			p.Description = desc.String
@@ -93,10 +105,10 @@ func (r *postgresProjectRepo) List(ctx context.Context, userID uuid.UUID) ([]mod
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating projects: %w", err)
+		return nil, 0, fmt.Errorf("iterating projects: %w", err)
 	}
 
-	return projects, nil
+	return projects, total, nil
 }
 
 func (r *postgresProjectRepo) Update(ctx context.Context, project *model.Project) error {

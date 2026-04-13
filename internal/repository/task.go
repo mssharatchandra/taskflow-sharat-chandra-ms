@@ -14,7 +14,7 @@ import (
 type TaskRepository interface {
 	Create(ctx context.Context, task *model.Task) error
 	FindByID(ctx context.Context, id uuid.UUID) (*model.Task, error)
-	ListByProject(ctx context.Context, projectID uuid.UUID, filter model.TaskFilter) ([]model.Task, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID, filter model.TaskFilter, pagination model.PaginationParams) ([]model.Task, int, error)
 	Update(ctx context.Context, task *model.Task) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
@@ -78,7 +78,7 @@ func (r *postgresTaskRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.T
 	return &t, nil
 }
 
-func (r *postgresTaskRepo) ListByProject(ctx context.Context, projectID uuid.UUID, filter model.TaskFilter) ([]model.Task, error) {
+func (r *postgresTaskRepo) ListByProject(ctx context.Context, projectID uuid.UUID, filter model.TaskFilter, pagination model.PaginationParams) ([]model.Task, int, error) {
 	var conditions []string
 	var args []interface{}
 	argIdx := 1
@@ -99,16 +99,28 @@ func (r *postgresTaskRepo) ListByProject(ctx context.Context, projectID uuid.UUI
 		argIdx++
 	}
 
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM tasks t
+		WHERE %s`, strings.Join(conditions, " AND "))
+
+	var total int
+	if err := r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting tasks: %w", err)
+	}
+
 	query := fmt.Sprintf(`
 		SELECT t.id, t.title, t.description, t.status, t.priority, t.project_id,
 		       t.assignee_id, t.creator_id, t.due_date, t.created_at, t.updated_at
 		FROM tasks t
 		WHERE %s
-		ORDER BY t.created_at DESC`, strings.Join(conditions, " AND "))
+		ORDER BY t.created_at DESC
+		LIMIT $%d OFFSET $%d`, strings.Join(conditions, " AND "), argIdx, argIdx+1)
+	args = append(args, pagination.Limit, pagination.Offset())
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("listing tasks: %w", err)
+		return nil, 0, fmt.Errorf("listing tasks: %w", err)
 	}
 	defer rows.Close()
 
@@ -124,7 +136,7 @@ func (r *postgresTaskRepo) ListByProject(ctx context.Context, projectID uuid.UUI
 			&t.ProjectID, &assignee, &t.CreatorID, &dueDate,
 			&t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("scanning task: %w", err)
+			return nil, 0, fmt.Errorf("scanning task: %w", err)
 		}
 
 		if desc.Valid {
@@ -139,10 +151,10 @@ func (r *postgresTaskRepo) ListByProject(ctx context.Context, projectID uuid.UUI
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating tasks: %w", err)
+		return nil, 0, fmt.Errorf("iterating tasks: %w", err)
 	}
 
-	return tasks, nil
+	return tasks, total, nil
 }
 
 func (r *postgresTaskRepo) Update(ctx context.Context, task *model.Task) error {
