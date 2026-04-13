@@ -5,8 +5,6 @@ services:
       POSTGRES_USER: ${DB_USER:-taskflow}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-taskflow}
       POSTGRES_DB: ${DB_NAME:-taskflow}
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

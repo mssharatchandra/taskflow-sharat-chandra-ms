@@ -13,7 +13,7 @@ This implementation is built for the **Backend Engineer** track and includes:
 - Postman collection for end-to-end API testing
 
 Tech stack:
-- Go 1.24
+- Go 1.25
 - Gin
 - PostgreSQL 16
 - `database/sql` + `lib/pq`
@@ -70,14 +70,20 @@ To stay within scope and keep implementation quality high:
 Assumption: Docker is installed and running.
 
 ```bash
-git clone https://github.com/<your-username>/taskflow-<your-name>.git
-cd taskflow-<your-name>
+git clone <your-public-repo-url>
+cd <your-repo-folder>
 cp .env.example .env
 docker compose up --build
 ```
 
 API is available at:
 - `http://localhost:8080`
+
+If `8080` is already in use locally, run:
+
+```bash
+PORT=18080 docker compose up --build
+```
 
 Health check:
 - `GET http://localhost:8080/health`

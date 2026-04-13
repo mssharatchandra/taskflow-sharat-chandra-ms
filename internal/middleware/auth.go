@@ -13,15 +13,17 @@ import (
 // Authorization header and sets user_id and email on the context.
 func Auth(jwtSecret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		unauthorized := gin.H{"error": "unauthorized"}
+
 		header := c.GetHeader("Authorization")
 		if header == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authorization header is required"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, unauthorized)
 			return
 		}
 
 		tokenString := strings.TrimPrefix(header, "Bearer ")
 		if tokenString == header {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization format, expected Bearer token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, unauthorized)
 			return
 		}
 
@@ -32,25 +34,25 @@ func Auth(jwtSecret string) gin.HandlerFunc {
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !token.Valid {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, unauthorized)
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, unauthorized)
 			return
 		}
 
 		userIDStr, ok := claims["user_id"].(string)
 		if !ok {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token: missing user_id"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, unauthorized)
 			return
 		}
 
 		userID, err := uuid.Parse(userIDStr)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token: malformed user_id"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, unauthorized)
 			return
 		}
 

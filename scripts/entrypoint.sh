@@ -9,7 +9,18 @@ done
 echo "PostgreSQL is ready."
 
 echo "Running database migrations..."
-migrate -path /migrations -database "$DATABASE_URL" up
+MIGRATE_OUTPUT="$(migrate -path /migrations -database "$DATABASE_URL" up 2>&1)" || {
+  if echo "$MIGRATE_OUTPUT" | grep -q "no change"; then
+    echo "No new migrations to run."
+  else
+    echo "$MIGRATE_OUTPUT"
+    exit 1
+  fi
+}
+
+if [ -n "$MIGRATE_OUTPUT" ]; then
+  echo "$MIGRATE_OUTPUT"
+fi
 
 echo "Starting TaskFlow API server..."
 exec taskflow
