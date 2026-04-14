@@ -34,3 +34,6 @@ Thumbs.db
 bin/
 tmp/
 .cache/
+
+# Local planning notes (not for submission)
+plan.md
