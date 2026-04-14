@@ -1,73 +1,76 @@
-# TaskFlow Backend (Go + PostgreSQL)
+# TaskFlow Backend (Backend Engineer Take-Home)
 
 ## 1. Overview
-TaskFlow is a task management backend API with JWT auth, project management, and task assignment workflows.
+TaskFlow is a production-style task management backend that supports:
+- user registration/login
+- project creation and management
+- task creation, assignment, update, filtering, and deletion
+- JWT-protected access control
 
-This implementation is built for the **Backend Engineer** track and includes:
-- Go REST API (`gin`)
-- PostgreSQL with SQL migrations (up/down)
-- JWT authentication + bcrypt password hashing
-- Docker multi-stage build + `docker compose` workflow
-- Seed data for immediate review
-- Integration tests for auth and authorization paths
-- Postman collection for end-to-end API testing
-- GitHub Actions CI (gofmt, `go vet`, `go test`)
+This submission targets the **Backend Engineer** track and is intentionally backend-focused (no frontend app).
 
-Tech stack:
+### Stack
 - Go 1.25
-- Gin
+- Gin (`github.com/gin-gonic/gin`)
 - PostgreSQL 16
 - `database/sql` + `lib/pq`
-- `golang-jwt/jwt/v5`
-- `golang.org/x/crypto/bcrypt`
-- `golang-migrate` (inside container entrypoint)
+- `golang-migrate` for SQL migrations
+- JWT (`golang-jwt/jwt/v5`)
+- bcrypt (`golang.org/x/crypto/bcrypt`)
+- Docker + Docker Compose
 
 ---
 
 ## 2. Architecture Decisions
-### Layered backend structure
-I separated the code into `handler`, `service`, and `repository` layers under `internal/`.
-- `handler`: HTTP parsing/validation/response mapping
-- `service`: business logic and authorization checks
-- `repository`: SQL and database access
+### Layering and boundaries
+I used a layered architecture under `internal/`:
+- `handler/`: HTTP-only concerns (binding, validation, response mapping)
+- `service/`: business logic + authorization rules
+- `repository/`: SQL queries and persistence
 
-Why: this keeps handlers thin, makes business rules testable, and avoids "god functions".
+This keeps HTTP framework details out of business logic and makes each layer independently testable.
 
-### Raw SQL over ORM
-I intentionally used `database/sql` and handwritten SQL instead of an ORM.
+### Why raw SQL (not ORM)
+I chose `database/sql` + explicit SQL instead of an ORM:
+- better query control for ownership/access filters and stats aggregation
+- easier to reason about indexes and query plans
+- less hidden behavior for a take-home where correctness and clarity matter
 
-Why:
-- Explicit control over joins, filters, aggregates, and pagination queries
-- Easier to reason about performance and indexes in a take-home where SQL quality is evaluated
-- Better alignment with Go backend conventions for small/medium APIs
+Tradeoff accepted: more manual mapping (`Scan`) and boilerplate.
 
-Tradeoff:
-- More boilerplate mapping `Scan(...)` into structs
-- No compile-time query generation (could be improved later with `sqlc`)
+### Auth and authorization design
+- Passwords are hashed with bcrypt (`BCRYPT_COST`, default `12`, validated range `10..20`)
+- JWT expires in 24h and includes `user_id` + `email`
+- Middleware enforces authentication on non-auth routes
+- 401 vs 403 semantics are separated:
+  - `401 unauthorized`: missing/invalid token
+  - `403 forbidden`: authenticated but lacks permission
 
-### Auth and security
-- Passwords are hashed with bcrypt (configurable, default cost `12`)
-- JWT includes `user_id` and `email` claims and expires in 24 hours
-- Protected routes use Bearer token middleware
-- 401 and 403 are handled distinctly
+### Data and migration strategy
+- SQL migrations are versioned with both `up` and `down`
+- schema includes FK constraints, cascade behavior, enum-like checks, and indexes
+- seed migration creates the required review data (user/project/3 tasks)
 
-### Data modeling and constraints
-Schema is migration-driven with:
-- UUID primary keys
-- Foreign keys and cascades
-- Enum-like checks for `status` and `priority`
-- Indexes on common lookup/filter columns (`users.email`, `projects.owner_id`, `tasks.project_id`, `tasks.assignee_id`, `tasks.status`)
+### Error contract
+Validation failures return structured payloads:
+```json
+{ "error": "validation failed", "fields": { "email": "is required" } }
+```
+Not found / forbidden / unauthorized are consistently shaped.
 
-### Intentionally left out
-To stay within scope and keep implementation quality high:
-- No background jobs/queues
-- No rate limiting yet
-- No OpenAPI generation yet
+### Extra-mile ownership effort
+Beyond baseline requirements, I added:
+- pagination on list endpoints (`page`, `limit`, metadata)
+- `GET /projects/:id/stats` (counts by status + assignee)
+- integration tests for auth and authorization edge cases
+- CI workflow (`gofmt` check + `go vet` + `go test`)
+- `Makefile` for common workflows
+- dockerized smoke test script (`scripts/smoke.sh`) for fast sanity verification
 
 ---
 
 ## 3. Running Locally
-Assumption: Docker is installed and running.
+Assumption: reviewer has Docker installed and running.
 
 ```bash
 git clone <your-public-repo-url>
@@ -76,35 +79,28 @@ cp .env.example .env
 docker compose up --build
 ```
 
-API is available at:
+API URL:
 - `http://localhost:8080`
-
-If `8080` is already in use locally, run:
-
-```bash
-PORT=18080 docker compose up --build
-```
 
 Health check:
 - `GET http://localhost:8080/health`
 
-Notes:
-- PostgreSQL and API start from one command.
-- Migrations are automatically run on API container startup.
+If port `8080` is already occupied locally:
+```bash
+PORT=18080 docker compose up --build
+```
 
 ---
 
 ## 4. Running Migrations
-Migrations run automatically in `scripts/entrypoint.sh` when the API container starts.
+Migrations run automatically on container startup via `scripts/entrypoint.sh`.
 
-If you need to run manually from inside the API container:
-
+Manual commands (inside API container):
 ```bash
 docker compose exec api migrate -path /migrations -database "$DATABASE_URL" up
 ```
 
-Run down migration (one step):
-
+Run one down migration:
 ```bash
 docker compose exec api migrate -path /migrations -database "$DATABASE_URL" down 1
 ```
@@ -112,100 +108,80 @@ docker compose exec api migrate -path /migrations -database "$DATABASE_URL" down
 ---
 
 ## 5. Test Credentials
-Seeded credentials:
+Seed credentials (from migration):
+- Email: `test@example.com`
+- Password: `password123`
 
-- **Email:** `test@example.com`
-- **Password:** `password123`
-
-Seed data also includes:
+Seeded data includes:
 - 1 project
 - 3 tasks (`todo`, `in_progress`, `done`)
 
 ---
 
 ## 6. API Reference
-### Base URL
-- `http://localhost:8080`
+Base URL: `http://localhost:8080`
 
-### Authentication
+### Auth
 - `POST /auth/register`
 - `POST /auth/login`
 
 ### Projects
 - `GET /projects` (supports `page`, `limit`)
 - `POST /projects`
-- `GET /projects/:id` (project details + tasks)
-- `PATCH /projects/:id`
-- `DELETE /projects/:id`
+- `GET /projects/:id` (returns project + tasks)
+- `PATCH /projects/:id` (owner only)
+- `DELETE /projects/:id` (owner only)
 - `GET /projects/:id/stats` (bonus)
 
 ### Tasks
 - `GET /projects/:id/tasks` (supports `status`, `assignee`, `page`, `limit`)
 - `POST /projects/:id/tasks`
 - `PATCH /tasks/:id`
-- `DELETE /tasks/:id`
+- `DELETE /tasks/:id` (project owner or task creator)
 
-### Error response shapes
-Validation error:
-
+### Error responses
+Validation:
 ```json
 { "error": "validation failed", "fields": { "email": "is required" } }
 ```
 
-Not found:
-
-```json
-{ "error": "not found" }
-```
-
-Forbidden:
-
-```json
-{ "error": "forbidden" }
-```
-
 Unauthorized:
-
 ```json
 { "error": "unauthorized" }
 ```
 
-### Postman assets
-- Collection: `docs/taskflow.postman_collection.json`
-- Environment: `docs/taskflow.postman_environment.json`
+Forbidden:
+```json
+{ "error": "forbidden" }
+```
 
-These include all endpoints with sample requests and token auto-capture after login/register.
+Not found:
+```json
+{ "error": "not found" }
+```
+
+### API artifacts
+- Postman collection: `docs/taskflow.postman_collection.json`
+- Postman environment: `docs/taskflow.postman_environment.json`
 
 ---
 
 ## 7. What I'd Do With More Time
-1. Add fuller integration coverage for project/task authorization edge cases.
-2. Add request ID middleware and correlation-friendly structured logs.
-3. Add rate limiting and brute-force protection on auth endpoints.
-4. Improve API documentation with OpenAPI/Swagger generation.
-5. Add race-test and mutation-test coverage in CI for stronger regression guarantees.
-6. Consider `sqlc` for type-safe query generation and less manual scan boilerplate.
+1. Add broader integration coverage around cross-user authorization and negative cases.
+2. Add request IDs + correlation fields in logs for easier production debugging.
+3. Add auth hardening: rate limiting and brute-force protection.
+4. Generate OpenAPI docs from source and publish API docs.
+5. Add race checks and richer CI quality gates.
+6. Consider `sqlc` for type-safe query generation while keeping SQL explicit.
 
 ---
 
-## Additional Notes
-### Running tests
+## Useful Commands
 ```bash
-GOCACHE=$(pwd)/.cache/go-build go test ./...
-```
-
-### Common developer commands
-```bash
-make ci          # fmt-check + vet + test
-make smoke       # dockerized smoke verification (auth + protected route checks)
+make ci          # gofmt check + go vet + go test
+make smoke       # dockerized auth/protected-route smoke test
 make compose-up
 make compose-down
 ```
 
-### Environment variables
-See `.env.example` for required settings:
-- `PORT`
-- `DATABASE_URL`
-- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-- `JWT_SECRET`
-- `BCRYPT_COST`
+Required env vars are documented in `.env.example`.
