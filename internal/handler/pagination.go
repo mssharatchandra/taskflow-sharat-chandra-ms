@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sharatchandra/taskflow/internal/model"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/model"
 )
 
 func parsePagination(c *gin.Context) (model.PaginationParams, map[string]string) {

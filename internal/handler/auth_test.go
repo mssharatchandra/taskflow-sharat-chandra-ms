@@ -10,9 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/sharatchandra/taskflow/internal/handler"
-	"github.com/sharatchandra/taskflow/internal/model"
-	"github.com/sharatchandra/taskflow/internal/service"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/handler"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/model"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/service"
 )
 
 // mockUserRepo is a simple in-memory user repository for testing.

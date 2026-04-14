@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sharatchandra/taskflow/internal/config"
-	"github.com/sharatchandra/taskflow/internal/handler"
-	"github.com/sharatchandra/taskflow/internal/middleware"
-	"github.com/sharatchandra/taskflow/internal/repository"
-	"github.com/sharatchandra/taskflow/internal/service"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/config"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/handler"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/middleware"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/repository"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/service"
 )
 
 // Server holds the HTTP server and its dependencies.

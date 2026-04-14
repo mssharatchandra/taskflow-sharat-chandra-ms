@@ -73,8 +73,8 @@ Beyond baseline requirements, I added:
 Assumption: reviewer has Docker installed and running.
 
 ```bash
-git clone <your-public-repo-url>
-cd <your-repo-folder>
+git clone https://github.com/<your-username>/taskflow-sharat-chandra-ms.git
+cd taskflow-sharat-chandra-ms
 cp .env.example .env
 docker compose up --build
 ```

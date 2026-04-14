@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sharatchandra/taskflow/internal/model"
-	"github.com/sharatchandra/taskflow/internal/repository"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/model"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/repository"
 )
 
 // ProjectService handles business logic for projects.

@@ -1,4 +1,4 @@
-module github.com/sharatchandra/taskflow
+module github.com/sharatchandra/taskflow-sharat-chandra-ms
 
 go 1.25.0
 

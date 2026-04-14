@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/sharatchandra/taskflow/internal/model"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/model"
 )
 
 // TaskRepository defines the interface for task data access.

@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/sharatchandra/taskflow/internal/config"
-	"github.com/sharatchandra/taskflow/internal/database"
-	"github.com/sharatchandra/taskflow/internal/logger"
-	"github.com/sharatchandra/taskflow/internal/server"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/config"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/database"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/logger"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/server"
 )
 
 func main() {

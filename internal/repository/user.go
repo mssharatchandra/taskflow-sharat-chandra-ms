@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/sharatchandra/taskflow/internal/model"
+	"github.com/sharatchandra/taskflow-sharat-chandra-ms/internal/model"
 )
 
 // UserRepository defines the interface for user data access.
