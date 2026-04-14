@@ -9,8 +9,9 @@ This implementation is built for the **Backend Engineer** track and includes:
 - JWT authentication + bcrypt password hashing
 - Docker multi-stage build + `docker compose` workflow
 - Seed data for immediate review
-- Integration tests for auth endpoints
+- Integration tests for auth and authorization paths
 - Postman collection for end-to-end API testing
+- GitHub Actions CI (gofmt, `go vet`, `go test`)
 
 Tech stack:
 - Go 1.25
@@ -62,7 +63,6 @@ To stay within scope and keep implementation quality high:
 - No background jobs/queues
 - No rate limiting yet
 - No OpenAPI generation yet
-- Limited integration tests (focused on auth)
 
 ---
 
@@ -183,7 +183,7 @@ These include all endpoints with sample requests and token auto-capture after lo
 2. Add request ID middleware and correlation-friendly structured logs.
 3. Add rate limiting and brute-force protection on auth endpoints.
 4. Improve API documentation with OpenAPI/Swagger generation.
-5. Add Makefile targets (`test`, `lint`, `compose-up`, `compose-down`) for smoother developer UX.
+5. Add race-test and mutation-test coverage in CI for stronger regression guarantees.
 6. Consider `sqlc` for type-safe query generation and less manual scan boilerplate.
 
 ---
@@ -192,6 +192,14 @@ These include all endpoints with sample requests and token auto-capture after lo
 ### Running tests
 ```bash
 GOCACHE=$(pwd)/.cache/go-build go test ./...
+```
+
+### Common developer commands
+```bash
+make ci          # fmt-check + vet + test
+make smoke       # dockerized smoke verification (auth + protected route checks)
+make compose-up
+make compose-down
 ```
 
 ### Environment variables
