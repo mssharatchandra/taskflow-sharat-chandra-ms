@@ -1,4 +1,4 @@
-# TaskFlow Backend (Backend Engineer Take-Home)
+# TaskFlow Backend
 
 ## 1. Overview
 TaskFlow is a production-style task management backend that supports:
@@ -6,8 +6,6 @@ TaskFlow is a production-style task management backend that supports:
 - project creation and management
 - task creation, assignment, update, filtering, and deletion
 - JWT-protected access control
-
-This submission targets the **Backend Engineer** track and is intentionally backend-focused (no frontend app).
 
 ### Stack
 - Go 1.25
